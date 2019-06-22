@@ -1,12 +1,17 @@
 package project.miran.com.firebasechatapp
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Menu
+import android.view.MenuItem
 import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.firebase.ui.auth.AuthUI
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
@@ -90,13 +95,25 @@ class MainActivity : AppCompatActivity() {
             }
 
         }
-
+        adapter.addData(friendlyMessageList)
         messageListView.setHasFixedSize(false)
         messageListView.layoutManager = LinearLayoutManager(this)
         messageListView.adapter = adapter
 
-        adapter.addData(friendlyMessageList)
 
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == RC_SIGN_IN) {
+            if (resultCode == Activity.RESULT_OK) {
+                Toast.makeText(this, "Signed In", Toast.LENGTH_SHORT).show()
+
+            } else if (resultCode == Activity.RESULT_CANCELED) {
+                Toast.makeText(this, "Signed Cancelled", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+        }
     }
 
     private fun onSignoutCleanUp() {
@@ -124,7 +141,8 @@ class MainActivity : AppCompatActivity() {
 
             override fun onChildAdded(p0: DataSnapshot, p1: String?) {
                 val f0 = p0.getValue(FriendlyMessage::class.java)
-                friendlyMessageList.add(f0!!)
+                adapter.addData(f0!!)
+                messageListView.smoothScrollToPosition(RecyclerView.SCROLL_INDICATOR_END)
                 adapter.notifyDataSetChanged()
             }
 
@@ -146,6 +164,16 @@ class MainActivity : AppCompatActivity() {
         detachDataBaseReadListener()
         adapter.clearAll()
 
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem?): Boolean {
+        when (item!!.itemId) {
+            R.id.sign_out -> {
+                AuthUI.getInstance().signOut(this)
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
