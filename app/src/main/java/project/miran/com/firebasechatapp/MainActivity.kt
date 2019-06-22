@@ -3,13 +3,16 @@ package project.miran.com.firebasechatapp
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
 import android.view.Menu
 import android.widget.ProgressBar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.firebase.ui.auth.AuthUI
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 import kotlinx.android.synthetic.main.activity_main.*
+import java.util.Arrays.asList
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -18,18 +21,26 @@ class MainActivity : AppCompatActivity() {
     val ANONYMOUS = "anonymous"
     val DEFAULT_MSG_LENGTH_LIMIT = 100
     private lateinit var mUserName: String
+    private val RC_SIGN_IN = 123
 
     private lateinit var firebaseDatabase: FirebaseDatabase
     private lateinit var databaseReference: DatabaseReference
     private lateinit var childEventListener: ChildEventListener
+    private lateinit var mAuth: FirebaseAuth
+    private lateinit var authStateListener: FirebaseAuth.AuthStateListener
+    private lateinit var friendlyMessageList: MutableList<FriendlyMessage>
+
+    val adapter = MessageAdapter();
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        mAuth = FirebaseAuth.getInstance();
         firebaseDatabase = FirebaseDatabase.getInstance()
         databaseReference = firebaseDatabase.reference.child("messages")
-        var friendlyMessageList: MutableList<FriendlyMessage> = arrayListOf()
-        val adapter = MessageAdapter(friendlyMessageList)
+        friendlyMessageList = arrayListOf()
 
         mUserName = ANONYMOUS
         progressBar.visibility = ProgressBar.INVISIBLE
@@ -53,39 +64,87 @@ class MainActivity : AppCompatActivity() {
             messageEditText.setText("")
         }
 
-        childEventListener = object : ChildEventListener {
 
-            override fun onCancelled(p0: DatabaseError) {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        authStateListener = FirebaseAuth.AuthStateListener {
+
+            if (it.currentUser != null) {
+//                signed in
+                onSignedInitialized(it.currentUser!!.displayName)
+            } else {
+//                not signed in
+
+                onSignoutCleanUp()
+                startActivityForResult(
+                    AuthUI.getInstance()
+                        .createSignInIntentBuilder()
+                        .setAvailableProviders(
+                            asList(
+                                AuthUI.IdpConfig.GoogleBuilder().build(),
+                                AuthUI.IdpConfig.EmailBuilder().build()
+                            )
+                        )
+                        .build(),
+                    RC_SIGN_IN
+                )
+
             }
-
-            override fun onChildMoved(p0: DataSnapshot, p1: String?) {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onChildChanged(p0: DataSnapshot, p1: String?) {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onChildAdded(p0: DataSnapshot, p1: String?) {
-                val f0 =p0.getValue(FriendlyMessage::class.java)
-                friendlyMessageList.add(f0!!)
-                adapter.notifyDataSetChanged()
-            }
-
-            override fun onChildRemoved(p0: DataSnapshot) {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
 
         }
-        databaseReference.addChildEventListener(childEventListener)
-
 
         messageListView.setHasFixedSize(false)
         messageListView.layoutManager = LinearLayoutManager(this)
         messageListView.adapter = adapter
 
+        adapter.addData(friendlyMessageList)
+
+    }
+
+    private fun onSignoutCleanUp() {
+        mUserName = ANONYMOUS
+        adapter.clearAll()
+
+    }
+
+    private fun onSignedInitialized(displayName: String?) {
+        mUserName = displayName!!
+        attachDataBaseReadListener()
+
+    }
+
+
+    private fun detachDataBaseReadListener() {
+        databaseReference.removeEventListener(childEventListener)
+    }
+
+    private fun attachDataBaseReadListener() {
+        childEventListener = object : ChildEventListener {
+            override fun onCancelled(p0: DatabaseError) {}
+            override fun onChildMoved(p0: DataSnapshot, p1: String?) {}
+            override fun onChildChanged(p0: DataSnapshot, p1: String?) {}
+
+            override fun onChildAdded(p0: DataSnapshot, p1: String?) {
+                val f0 = p0.getValue(FriendlyMessage::class.java)
+                friendlyMessageList.add(f0!!)
+                adapter.notifyDataSetChanged()
+            }
+
+            override fun onChildRemoved(p0: DataSnapshot) {
+            }
+
+        }
+        databaseReference.addChildEventListener(childEventListener)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mAuth.addAuthStateListener(authStateListener)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        mAuth.removeAuthStateListener(authStateListener)
+        detachDataBaseReadListener()
+        adapter.clearAll()
 
     }
 

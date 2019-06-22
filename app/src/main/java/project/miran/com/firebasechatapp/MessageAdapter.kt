@@ -7,7 +7,13 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import kotlinx.android.synthetic.main.item_message.view.*
 
-class MessageAdapter(var list: MutableList<FriendlyMessage>) : RecyclerView.Adapter<MessageAdapter.ViewHolder>() {
+class MessageAdapter() : RecyclerView.Adapter<MessageAdapter.ViewHolder>() {
+
+    private var list: MutableList<FriendlyMessage> = arrayListOf()
+
+    public fun addData(data: MutableList<FriendlyMessage>){
+        list.addAll(data)
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val inflater = LayoutInflater.from(parent.context).inflate(R.layout.item_message, parent, false)
@@ -20,6 +26,10 @@ class MessageAdapter(var list: MutableList<FriendlyMessage>) : RecyclerView.Adap
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.setData(list.get(position))
+    }
+
+    fun clearAll() {
+        list.clear()
     }
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
