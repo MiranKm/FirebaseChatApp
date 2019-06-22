@@ -3,12 +3,12 @@ package project.miran.com.firebasechatapp
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.Menu
 import android.widget.ProgressBar
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.*
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
@@ -19,16 +19,19 @@ class MainActivity : AppCompatActivity() {
     val DEFAULT_MSG_LENGTH_LIMIT = 100
     private lateinit var mUserName: String
 
-    private lateinit var firebaseDatabase:FirebaseDatabase
+    private lateinit var firebaseDatabase: FirebaseDatabase
     private lateinit var databaseReference: DatabaseReference
+    private lateinit var childEventListener: ChildEventListener
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        firebaseDatabase= FirebaseDatabase.getInstance()
-        databaseReference= firebaseDatabase.reference.child("messages")
+        firebaseDatabase = FirebaseDatabase.getInstance()
+        databaseReference = firebaseDatabase.reference.child("messages")
+        var friendlyMessageList: MutableList<FriendlyMessage> = arrayListOf()
+        val adapter = MessageAdapter(friendlyMessageList)
 
-        mUserName= ANONYMOUS
+        mUserName = ANONYMOUS
         progressBar.visibility = ProgressBar.INVISIBLE
         photoPickerButton.setOnClickListener {
 
@@ -45,19 +48,40 @@ class MainActivity : AppCompatActivity() {
 
 
         sendButton.setOnClickListener {
-            val friendlyMessage= FriendlyMessage(messageEditText.text.toString().trim(),mUserName,"")
+            val friendlyMessage = FriendlyMessage(messageEditText.text.toString().trim(), mUserName, "")
             databaseReference.push().setValue(friendlyMessage)
             messageEditText.setText("")
         }
 
-        var friendlyMessageList: MutableList<FriendlyMessage> = arrayListOf()
+        childEventListener = object : ChildEventListener {
 
-        friendlyMessageList.add(FriendlyMessage("heyy", "name", "image url"))
-        friendlyMessageList.add(FriendlyMessage("heyy", "name", "image url"))
-        friendlyMessageList.add(FriendlyMessage("heyy", "name", "image url"))
-        friendlyMessageList.add(FriendlyMessage("heyy", "name", "image url"))
+            override fun onCancelled(p0: DatabaseError) {
+                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
 
-        val adapter = MessageAdapter(friendlyMessageList)
+            override fun onChildMoved(p0: DataSnapshot, p1: String?) {
+                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
+
+            override fun onChildChanged(p0: DataSnapshot, p1: String?) {
+                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
+
+            override fun onChildAdded(p0: DataSnapshot, p1: String?) {
+                val f0 =p0.getValue(FriendlyMessage::class.java)
+                friendlyMessageList.add(f0!!)
+                adapter.notifyDataSetChanged()
+            }
+
+            override fun onChildRemoved(p0: DataSnapshot) {
+                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
+
+
+        }
+        databaseReference.addChildEventListener(childEventListener)
+
+
         messageListView.setHasFixedSize(false)
         messageListView.layoutManager = LinearLayoutManager(this)
         messageListView.adapter = adapter
