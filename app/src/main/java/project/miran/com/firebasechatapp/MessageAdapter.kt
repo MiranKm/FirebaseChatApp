@@ -6,13 +6,24 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import kotlinx.android.synthetic.main.item_message.view.*
+import android.view.animation.AnimationUtils.loadAnimation
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
+
 
 class MessageAdapter() : RecyclerView.Adapter<MessageAdapter.ViewHolder>() {
 
     private var list: MutableList<FriendlyMessage> = arrayListOf()
+    private var lastPosition = -1
 
-    public fun addData(data: MutableList<FriendlyMessage>){
+    fun addData(data: MutableList<FriendlyMessage>){
         list.addAll(data)
+        notifyDataSetChanged()
+    }
+
+     fun addData(data: FriendlyMessage){
+        list.add(data)
+        notifyDataSetChanged()
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -26,6 +37,8 @@ class MessageAdapter() : RecyclerView.Adapter<MessageAdapter.ViewHolder>() {
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.setData(list.get(position))
+        setAnimation(holder.itemView, position);
+
     }
 
     fun clearAll() {
@@ -44,4 +57,13 @@ class MessageAdapter() : RecyclerView.Adapter<MessageAdapter.ViewHolder>() {
             authorTV.text = data.name
         }
     }
+    private fun setAnimation(viewToAnimate: View, position: Int) {
+        // If the bound view wasn't previously displayed on screen, it's animated
+        if (position > lastPosition) {
+            val animation = loadAnimation(viewToAnimate.context, android.R.anim.slide_in_left)
+            viewToAnimate.startAnimation(animation)
+            lastPosition = position
+        }
+    }
+
 }
